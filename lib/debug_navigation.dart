@@ -21,7 +21,9 @@ class DebugNavigation {
             }
             return FadeTransition(
                 child: VRBugReport(
-                    bugReportKey: Configuration.bugReportKey, child: child),
+                    bugReportServer: Configuration.bugReportServer,
+                    bugReportKey: Configuration.bugReportKey,
+                    child: child),
                 opacity: anim);
           },
           transitionDuration: DebugNavigation.transitionDuration,
@@ -40,7 +42,9 @@ class DebugNavigation {
             }
             return FadeTransition(
                 child: VRBugReport(
-                    bugReportKey: Configuration.bugReportKey, child: child),
+                    bugReportServer: Configuration.bugReportServer,
+                    bugReportKey: Configuration.bugReportKey,
+                    child: child),
                 opacity: anim);
           },
           transitionDuration: DebugNavigation.transitionDuration,
