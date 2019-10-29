@@ -8,9 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vr_bug_report/configuration.dart';
 import 'package:vr_bug_report/report.dart';
-import 'package:vr_bug_report/screens/bugreport.screen.dart';
-import 'package:vr_bug_report/screens/choose.type.dart';
 import 'package:vr_bug_report/screens/feedback.screen.dart';
+import 'package:vr_bug_report/widgets/bug.button.dart';
 
 class VRBugReport extends StatefulWidget {
   final String bugReportKey;
@@ -30,8 +29,7 @@ class VRBugReport extends StatefulWidget {
 
 class _VRBugReportState extends State<VRBugReport> {
   var scr = new GlobalKey();
-  double xPos = 20;
-  double yPos = 20;
+
   double notificationPosY = -100;
   Uint8List imageBytes;
   String base64Image;
@@ -50,21 +48,9 @@ class _VRBugReportState extends State<VRBugReport> {
   @override
   void initState() {
     super.initState();
-    textController = TextEditingController();
-    this.screen = ChooseTypeScreen(onChoose: this.chooseOption);
 
     Configuration.bugReportKey = this.widget.bugReportKey;
     Configuration.bugReportServer = this.widget.bugReportServer;
-  }
-
-  @override
-  didChangeDependencies() {
-    super.didChangeDependencies();
-
-    this.setState(() {
-      xPos = MediaQuery.of(context).size.width - 40;
-      yPos = MediaQuery.of(context).size.height * 0.07;
-    });
   }
 
   takeScreenshot() async {
@@ -73,27 +59,23 @@ class _VRBugReportState extends State<VRBugReport> {
     var byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     var pngBytes = byteData.buffer.asUint8List();
 
-    this.setState(() {
-      imageBytes = pngBytes;
-      showNavigation = true;
-    });
-
-    await Future.delayed(Duration(milliseconds: 300));
-
-    this.setState(() {
-      navOpacity = 1;
-    });
-
-    this.base64Image = base64Encode(pngBytes);
+    Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return FeedbackScreen(
+          pngBytes: pngBytes, sendFeedback: this.sendFeedback);
+    }));
   }
 
-  sendFeedback(String text, String image) async {
+  sendFeedback(String email, String desc, Uint8List image) async {
+    var base64Image = base64Encode(image);
+
     if (!this.sending) {
       this.sending = true;
 
+      String text = "E-mail: $email\nDescrição: $desc";
+
       var report =
           new Report(Configuration.bugReportServer, Configuration.bugReportKey);
-      var sendStatus = await report.sendReport(text, image);
+      var sendStatus = await report.sendReport(text, base64Image);
 
       if (sendStatus == 200) {
         this.sending = false;
@@ -101,9 +83,6 @@ class _VRBugReportState extends State<VRBugReport> {
           this.showMessage = true;
           this.notificationPosY = 0;
           this.showNavigation = false;
-          this.screen = ChooseTypeScreen(
-            onChoose: this.chooseOption,
-          );
         });
 
         await Future.delayed(Duration(seconds: 2));
@@ -121,57 +100,6 @@ class _VRBugReportState extends State<VRBugReport> {
     }
   }
 
-  handleDrop(DraggableDetails details) {
-    this.setState(() {
-      this.xPos = details.offset.dx;
-      this.yPos = details.offset.dy;
-    });
-  }
-
-  feedbackChoose(option, text) {
-    if (option == 0) {
-      sendFeedback(text, this.base64Image);
-      return;
-    }
-
-    // cancel
-    if (option == 1) {
-      this.setState(() {
-        this.showNavigation = false;
-        this.screen = ChooseTypeScreen(
-          onChoose: this.chooseOption,
-        );
-      });
-    }
-  }
-
-  chooseOption(index) {
-    if (index == 0) {
-      this.setState(() {
-        this.screen = FeedbackScreen(
-          onChoose: this.feedbackChoose,
-        );
-      });
-    }
-
-    if (index == 1) {
-      this.setState(() {
-        this.screen = BugReportScreen(
-          onChoose: this.feedbackChoose,
-        );
-      });
-    }
-
-    if (index == 2) {
-      this.setState(() {
-        this.showNavigation = false;
-        this.screen = ChooseTypeScreen(
-          onChoose: this.chooseOption,
-        );
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -184,20 +112,10 @@ class _VRBugReportState extends State<VRBugReport> {
           height: MediaQuery.of(context).size.height,
           child: Stack(children: <Widget>[
             RepaintBoundary(key: scr, child: this.widget.child),
-            Container(
-              transform: Matrix4.translationValues(xPos, yPos, 0),
-              child: Draggable(
-                feedback: buildBugButton(),
-                child: buildBugButton(),
-                childWhenDragging: Container(),
-                onDragEnd: this.handleDrop,
-              ),
-            ),
-            (this.showNavigation
-                ? BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                    child: Container(color: Colors.black12, child: this.screen))
-                : Container()),
+            BugButton(onTap: () {
+              this.takeScreenshot();
+            }),
+            (this.showNavigation ? this.screen : Container()),
             (this.showMessage
                 ? AnimatedContainer(
                     width: MediaQuery.of(context).size.width,
@@ -216,28 +134,6 @@ class _VRBugReportState extends State<VRBugReport> {
                 : Container())
           ]),
         ));
-  }
-
-  buildBugButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          this.takeScreenshot();
-        },
-        child: Opacity(
-          opacity: 0.5,
-          child: Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
-                color: Colors.redAccent),
-            child: Icon(Icons.bug_report, color: Colors.white),
-          ),
-        ),
-      ),
-    );
   }
 }
 

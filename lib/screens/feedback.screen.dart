@@ -1,11 +1,13 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:vr_bug_report/screens/popup.template.dart';
-import 'package:vr_bug_report/widgets/popup.button.dart';
+import 'package:vr_bug_report/screens/image.editor.dart';
 
 class FeedbackScreen extends StatefulWidget {
-  final Function onChoose;
+  final Uint8List pngBytes;
+  final Function sendFeedback;
 
-  FeedbackScreen({Key key, this.onChoose}) : super(key: key);
+  FeedbackScreen({Key key, this.pngBytes, this.sendFeedback}) : super(key: key);
 
   @override
   _FeedbackScreenState createState() => _FeedbackScreenState();
@@ -13,113 +15,175 @@ class FeedbackScreen extends StatefulWidget {
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
   var showPopup = true;
+  bool firstTime = true;
   bool sendingFeeback = false;
-  TextEditingController textController;
+  TextEditingController emailController;
+  TextEditingController descController;
+  FocusNode emailFocus;
+  Uint8List actualImage;
 
   @override
   void initState() {
     super.initState();
-    textController = TextEditingController();
+    emailController = TextEditingController();
+    descController = TextEditingController();
+    emailFocus = new FocusNode(canRequestFocus: true);
+
+    actualImage = this.widget.pngBytes;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (firstTime) {
+      firstTime = false;
+      FocusScope.of(context).requestFocus(emailFocus);
+    }
+  }
+
+  doneEditing(newImage) {
+    this.setState(() {
+      this.actualImage = newImage;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopupTemplate(
-      headerColor: Colors.blueGrey,
-      headerIcon: Icons.feedback,
-      width: MediaQuery.of(context).size.width * 0.9,
-      height: MediaQuery.of(context).size.height * 0.70,
-      show: this.showPopup,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Expanded(
-            flex: 1,
-            child: Column(children: <Widget>[
-              Text("Enviar um Feedback",
-                  style: TextStyle(
-                      color: Colors.black87,
-                      fontFamily: 'Roboto',
-                      fontSize: 16,
-                      decoration: TextDecoration.none)),
-              Container(
-                margin: EdgeInsets.only(top: 5),
-                child: Text("O que gostaria de dizer sobre o aplicativo?",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Color(0xFFBEBEBE),
-                        fontFamily: 'Roboto',
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14,
-                        decoration: TextDecoration.none)),
+    return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          actions: <Widget>[
+            IconButton(
+              icon: Icon(Icons.send),
+              tooltip: 'Enviar',
+              onPressed: () {
+                if (this.widget.sendFeedback != null) {
+                  this.widget.sendFeedback(this.emailController.text,
+                      this.descController.text, this.actualImage);
+                  Navigator.of(context).pop();
+                }
+              },
+            )
+          ],
+          centerTitle: true,
+          title: Text("Reportar um bug",
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: "Roboto Regular")),
+          iconTheme: IconThemeData(color: Colors.blue),
+          elevation: 0,
+          bottom: PreferredSize(
+              preferredSize: Size(double.infinity, 1),
+              child: Container(
+                  width: double.infinity, height: 1, color: Color(0xFFDEDEDE))),
+          backgroundColor: Color(0xFFEEEEEE),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              TextFormField(
+                focusNode: emailFocus,
+                autovalidate: true,
+                controller: emailController,
+                validator: (text) {
+                  if (text == "") {
+                    return "Seu e-mail não pode estar em branco";
+                  }
+                  return null;
+                },
+                decoration: InputDecoration(
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFFDEDEDE))),
+                    focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.blue)),
+                    labelStyle: TextStyle(color: Color(0xFFDDDDDD)),
+                    labelText: "Insira seu e-mail"),
               ),
-            ]),
-          ),
-          Expanded(
-            flex: 8,
-            child: Container(
-              child: Flex(direction: Axis.vertical, children: <Widget>[
-                Expanded(
-                  child: Material(
-                    child: TextFormField(
-                        minLines: 200,
-                        maxLines: 200,
-                        controller: textController,
-                        decoration: InputDecoration(
-                            alignLabelWithHint: true,
-                            labelText: 'Digite aqui seu feedback:',
-                            labelStyle: TextStyle(
-                                color: Color(0xFFBEBEBE), fontSize: 14),
-                            focusedBorder: InputBorder.none),
-                        textInputAction: TextInputAction.newline),
-                  ),
-                )
-              ]),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Container(
-              margin: EdgeInsets.only(top: 20),
-              child: Column(children: <Widget>[
-                PopupButton(
+              TextFormField(
+                minLines: 5,
+                maxLines: 5,
+                controller: descController,
+                autovalidate: true,
+                validator: (text) {
+                  if (text == "") {
+                    return "A descrição não pode estar vazia!";
+                  }
+                  if (text.length < 15) {
+                    return "Descreva o problema com mais detalhes";
+                  }
+                  return null;
+                },
+                style: TextStyle(fontSize: 14),
+                decoration: InputDecoration(
+                    alignLabelWithHint: true,
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFFDEDEDE))),
+                    focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.blue)),
+                    hasFloatingPlaceholder: false,
+                    labelStyle: TextStyle(color: Color(0xFFDDDDDD)),
+                    labelText:
+                        "Por favor, seja o mais detalhista possível.\nO que você esperava e o que aconteceu?"),
+              ),
+              AttachmentImage(
                   onTap: () {
-                    this.setState(() {
-                      this.sendingFeeback = true;
-                    });
-
-                    if (this.widget.onChoose != null) {
-                      this.widget.onChoose(0, textController.text);
-                    }
+                    Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (context) {
+                      return ImageEditorScreen(
+                        backgroundImage: Image.memory(actualImage),
+                        doneEditing: this.doneEditing,
+                      );
+                    }));
                   },
-                  isLoading: this.sendingFeeback,
-                  labelLoading: 'Enviando...',
-                  color: Colors.lightBlue,
-                  label: "Enviar",
-                ),
-                Container(
-                  margin: EdgeInsets.only(top: 5),
-                  child: PopupButton(
-                    onTap: () {
-                      this.setState(() {
-                        this.showPopup = false;
-                      });
+                  actualImage: actualImage)
+            ],
+          ),
+        ));
+  }
+}
 
-                      Future.delayed(Duration(milliseconds: 300), () {
-                        if (this.widget.onChoose != null) {
-                          this.widget.onChoose(1, null);
-                        }
-                      });
-                    },
-                    color: Colors.grey,
-                    label: "Cancelar",
-                  ),
-                )
-              ]),
-            ),
-          )
-        ],
+class AttachmentImage extends StatelessWidget {
+  final Function onTap;
+
+  const AttachmentImage({
+    Key key,
+    this.onTap,
+    @required this.actualImage,
+  }) : super(key: key);
+
+  final Uint8List actualImage;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        if (this.onTap != null) {
+          this.onTap();
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.only(top: 10),
+        decoration: BoxDecoration(
+            border: Border.all(color: Color(0xFFDEDEDE)),
+            borderRadius: BorderRadius.circular(7)),
+        width: MediaQuery.of(context).size.width * 0.2,
+        height: MediaQuery.of(context).size.height * 0.2,
+        child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Stack(alignment: Alignment.center, children: <Widget>[
+              Image.memory(this.actualImage),
+              Container(
+                  decoration: BoxDecoration(
+                      color: Color(0x99DEDEDE),
+                      borderRadius: BorderRadius.circular(50)),
+                  padding: EdgeInsets.all(5),
+                  child: Icon(Icons.edit))
+            ])),
       ),
     );
   }
