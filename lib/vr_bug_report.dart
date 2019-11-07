@@ -41,6 +41,7 @@ class _VRBugReportState extends State<VRBugReport> {
   bool showNavigation = false;
   Widget screen;
   bool changeWidget = false;
+  bool showBugButton = true;
 
   var txtStyle = const TextStyle(
       color: Colors.blueAccent, fontSize: 25, decoration: TextDecoration.none);
@@ -112,9 +113,15 @@ class _VRBugReportState extends State<VRBugReport> {
           height: MediaQuery.of(context).size.height,
           child: Stack(children: <Widget>[
             RepaintBoundary(key: scr, child: this.widget.child),
-            BugButton(onTap: () {
-              this.takeScreenshot();
-            }),
+            this.showBugButton
+                ? BugButton(onLongPress: () {
+                    this.setState(() {
+                      this.showBugButton = false;
+                    });
+                  }, onTap: () {
+                    this.takeScreenshot();
+                  })
+                : Container(),
             (this.showNavigation ? this.screen : Container()),
             (this.showMessage
                 ? AnimatedContainer(

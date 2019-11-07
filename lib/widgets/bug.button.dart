@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 class BugButton extends StatefulWidget {
   final Function onTap;
+  final Function onLongPress;
 
-  BugButton({Key key, this.onTap}) : super(key: key);
+  BugButton({Key key, this.onTap, this.onLongPress}) : super(key: key);
 
   @override
   _BugButtonState createState() => _BugButtonState();
@@ -47,6 +48,11 @@ class _BugButtonState extends State<BugButton> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        onLongPress: () {
+          if (this.widget.onLongPress != null) {
+            this.widget.onLongPress();
+          }
+        },
         onTap: () {
           if (this.widget.onTap != null) {
             this.widget.onTap();

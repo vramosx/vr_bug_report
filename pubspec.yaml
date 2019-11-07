@@ -1,8 +1,8 @@
 name: vr_bug_report
-description: A new Flutter package project.
-version: 0.0.1
+description: Flutter Bug Report Front-end
+version: 0.2.0
 author:
-homepage:
+homepage: http://vramos.com.br
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
